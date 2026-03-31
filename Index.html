@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Empathy Engine</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        textarea { width: 100%; height: 120px; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; resize: none; box-sizing: border-box;}
+        button { background-color: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; transition: 0.3s; width: 100%; }
+        button:hover { background-color: #0056b3; }
+        #loading { display: none; margin-top: 15px; color: #555; font-style: italic; }
+        #audio-container { margin-top: 25px; display: none; }
+        .emotion-badge { display: inline-block; background: #e2e8f0; padding: 5px 10px; border-radius: 15px; font-size: 14px; margin-bottom: 15px; font-weight: bold;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>The Empathy Engine 🎙️</h2>
+    <p style="color: #666; margin-bottom: 20px;">AI that feels what it reads.</p>
+
+    <textarea id="textInput" placeholder="Type a sentence here (e.g., 'I am so angry!' or 'I won the lottery!')..."></textarea>
+    
+    <button onclick="generateAudio()">Generate Empathetic Voice</button>
+
+    <div id="loading">🧠 Analyzing emotion and generating audio... Please wait.</div>
+
+    <div id="audio-container">
+        <div id="emotionDisplay" class="emotion-badge">Detected Emotion: <span></span></div>
+        <br>
+        <audio id="audioPlayer" controls></audio>
+    </div>
+</div>
+
+<script>
+    async function generateAudio() {
+        const text = document.getElementById("textInput").value;
+        const loading = document.getElementById("loading");
+        const audioContainer = document.getElementById("audio-container");
+        const audioPlayer = document.getElementById("audioPlayer");
+        const emotionSpan = document.querySelector("#emotionDisplay span");
+
+        if (!text.trim()) {
+            alert("Please enter some text!");
+            return;
+        }
+
+        // UI Reset
+        loading.style.display = "block";
+        audioContainer.style.display = "none";
+        
+        try {
+            // API Call to our FastAPI backend
+            const response = await fetch("/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (!response.ok) throw new Error("Failed to generate audio");
+
+            // Extract Emotion Header (sent by backend)
+            const detectedEmotion = response.headers.get("X-Emotion");
+            emotionSpan.textContent = detectedEmotion ? detectedEmotion.toUpperCase() : "UNKNOWN";
+
+            // Process Audio Blob
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            audioPlayer.src = audioUrl;
+            loading.style.display = "none";
+            audioContainer.style.display = "block";
+            audioPlayer.play();
+
+        } catch (error) {
+            alert("Error: " + error.message);
+            loading.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+</html>
